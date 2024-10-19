@@ -106,7 +106,7 @@ Past error message: {error_message}
 
 
 
-def build_refinement_prompt_for_query_execution(query, schema, error_message=""):
+def build_refinement_prompt_for_query_execution(query, schema, error_message="", user_training_question = ""):
     """
     Build a prompt for refining the query, including the previous query and any errors.
     """
@@ -121,6 +121,8 @@ Dataset Schema:
 Previous SQL Query:
 {query}
 
+User Requirement : {user_training_question}
+
 Instructions:
 1. Correct the SQL query based on the schema. Ensure all tables and columns are valid.
 2. Ensure correct SQL syntax and optimize the query (e.g., use indexes, minimize unnecessary joins).
@@ -130,7 +132,7 @@ Instructions:
 Past error message: {error_message}
 
 Parameters:
-Take sample values on the basis of {schema_description} in {query}
+Take sample values on the basis of schema {schema_description} in {query} with problem statement {user_training_question}
 """
 
     if error_message:
@@ -140,7 +142,7 @@ Take sample values on the basis of {schema_description} in {query}
     return base_prompt
 
 
-def build_initial_prompt_for_query_execution(schema, user_question):
+def build_initial_prompt_for_query_execution(schema, user_question , user_training_question):
     """
     Construct an initial prompt with schema details and specific instructions.
     The prompt gives structured guidance to Gemini for better SQL generation.
@@ -152,7 +154,8 @@ You are an expert SQL query generator. I will provide you with a database schema
 Dataset Schema:
 {schema_description}
 
-User Query: "{user_question}"
+Query: "{user_question}"
+User Requirement : {user_training_question}
 
 Instructions:
 1. Use only the columns and tables provided in the schema. Do not assume the existence of additional data or relationships.
@@ -163,7 +166,7 @@ Instructions:
 6. Validate that all table names and column names match those in the schema.
 
 Parameters:
-Take sample values on the basis of {schema_description} in {user_question}
+Take sample values on the basis of {schema_description} in {user_question} as described with problem statement {user_training_question}
 """
     return prompt
 
@@ -183,7 +186,7 @@ def iterative_refinement(query, schema, error_message="" ,flag=0):
         
         # Validate using Gemini's own schema compliance based on errors in previous iteration
         if flag == 1 :
-            prompt = build_refinement_prompt_for_query_execution(refined_query, schema, error_message)
+            prompt = build_refinement_prompt_for_query_execution(refined_query, schema, error_message, user_training_question)
         else:
             prompt = build_refinement_prompt(refined_query, schema, error_message)
         refined_query = get_gemini_response(prompt)
@@ -232,7 +235,7 @@ st.title("Gemini-powered SQL Query Generator with Dynamic Interaction")
 
 # User Input Section
 user_question = st.text_input("Ask your question in natural language:", key="input", placeholder="e.g., Show me the list of users from India")
-
+user_training_question = user_question
 # Generate the SQL query
 submit = st.button("Generate SQL")
 if submit:
@@ -329,26 +332,26 @@ if submit:
         st.error("Please enter 1 or 2")
         user_choice = 2
     retries = 0
-    max_retries = 3
+    max_retries = 5
     success = False
     refined_query = None
     # response = any
     # prompt = build_initial_prompt_for_query_execution(schema, user_question)
     refined_query = st.session_state.initial if user_choice == 1 else st.session_state.refined
-
+    st.write(user_training_question)
     #refined_query = refined
     if user_choice == 1: 
         st.code(st.session_state.initial, language="sql")
         #st.write(st.session_state.initial_query)
 
-        prompt = build_initial_prompt_for_query_execution(schema , refined_query)
+        prompt = build_initial_prompt_for_query_execution(schema , refined_query, user_training_question)
         refined_query = get_gemini_response(prompt)
         refined_query = clean_query_for_execution(refined_query)
         #refined_query = initial
     else:
         st.code(st.session_state.refined, language="sql")
         st.write(refined)
-        prompt = build_refinement_prompt_for_query_execution(refined_query, schema , "")
+        prompt = build_refinement_prompt_for_query_execution(refined_query, schema , "", user_training_question)
         refined_query = get_gemini_response(prompt)
         refined_query = clean_query_for_execution(refined_query)
         #refined_query = refined
