@@ -1,0 +1,24 @@
+name: Deploy Streamlit App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Google Cloud authentication
+      run: |
+        echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > $HOME/credentials.json
+      shell: bash
+
+    - name: Build and run Docker container
+      run: |
+        docker build -t streamlit-sql-generator .
+        docker run -e GOOGLE_APPLICATION_CREDENTIALS=$HOME/credentials.json -p 8501:8501 streamlit-sql-generator
