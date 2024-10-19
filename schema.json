@@ -1,0 +1,168 @@
+{
+    "database": "IM Database",
+    "tables": [
+      {
+        "name": "iil_users",
+        "columns": [
+          {
+            "name": "iil_user_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Primary Key",
+            "description": "Unique ID of the user"
+          },
+          {
+            "name": "iil_user_custtype",
+            "data_type": "numeric(5,0)",
+            "description": "What level of a customer the user is (1 -> Paid, 2 -> Free)"
+          },
+          {
+            "name": "iil_user_contactname",
+            "data_type": "character varying(250)",
+            "description": "Contact Person's Name"
+          },
+          {
+            "name": "iil_user_companyname",
+            "data_type": "character varying(250)",
+            "description": "Name of the Organization"
+          },
+          {
+            "name": "iil_user_ph_mobile",
+            "data_type": "character varying(250)",
+            "key_constraint": "Unique Key",
+            "description": "Unique Mobile Number of the user"
+          },
+          {
+            "name": "fk_iil_city_id",
+            "data_type": "numeric(5,0)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key of the User's City ID"
+          },
+          {
+            "name": "fk_iil_country_iso",
+            "data_type": "character varying(5)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key of the User's Country ISO"
+          }
+        ]
+      },
+      {
+        "name": "iil_user_items",
+        "columns": [
+          {
+            "name": "iil_user_item_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Primary Key",
+            "description": "Unique ID of the Item"
+          },
+          {
+            "name": "fk_iil_user_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key to the User's ID"
+          },
+          {
+            "name": "iil_user_item_name",
+            "data_type": "character varying(250)",
+            "description": "Product Name"
+          },
+          {
+            "name": "iil_user_item_price",
+            "data_type": "numeric(5,0)",
+            "description": "Product Price"
+          },
+          {
+            "name": "iil_user_item_price_unit",
+            "data_type": "character varying(10)",
+            "description": "Product Price Unit"
+          },
+          {
+            "name": "iil_user_item_desc",
+            "data_type": "character varying(250)",
+            "description": "Product Description"
+          }
+        ]
+      },
+      {
+        "name": "iil_mcats",
+        "columns": [
+          {
+            "name": "iil_mcat_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Primary Key",
+            "description": "Unique ID of IndiaMART MCat"
+          },
+          {
+            "name": "iil_mcat_name",
+            "data_type": "character varying(250)",
+            "description": "MCat Name"
+          },
+          {
+            "name": "iil_mcat_prod_serv",
+            "data_type": "character varying(1)",
+            "description": "Flag if the MCat is Product or Service Type ('P' -> Product, 'S' -> Service)"
+          }
+        ]
+      },
+      {
+        "name": "iil_items_to_iil_mcats",
+        "columns": [
+          {
+            "name": "fk_iil_item_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key to Item ID"
+          },
+          {
+            "name": "fk_iil_mcat_id",
+            "data_type": "numeric(10,0)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key to Mcat ID"
+          },
+          {
+            "name": "flag_mapping_is_prime",
+            "data_type": "numeric(1,0)",
+            "description": "Flag if the mapping is prime or not (1 -> Mapping is Prime, 0 -> Not Prime)"
+          }
+        ]
+      },
+      {
+        "name": "iil_cities",
+        "columns": [
+          {
+            "name": "iil_city_id",
+            "data_type": "numeric(5,0)",
+            "key_constraint": "Primary Key",
+            "description": "Unique City ID"
+          },
+          {
+            "name": "iil_city_name",
+            "data_type": "character varying(100)",
+            "description": "City Name"
+          },
+          {
+            "name": "fk_iil_country_iso",
+            "data_type": "character varying(5)",
+            "key_constraint": "Foreign Key",
+            "description": "Foreign Key to Country ISO"
+          }
+        ]
+      },
+      {
+        "name": "iil_countries",
+        "columns": [
+          {
+            "name": "iil_country_iso",
+            "data_type": "character varying(5)",
+            "key_constraint": "Primary Key",
+            "description": "Country ISO Code"
+          },
+          {
+            "name": "iil_country_name",
+            "data_type": "character varying(100)",
+            "description": "Country Name"
+          }
+        ]
+      }
+    ]
+  }
+  
