@@ -1,105 +1,164 @@
 import streamlit as st
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, SafetySetting
-from google.cloud import storage
 import os
-import tempfile
+import json
+import google.generativeai as genai
 
-# Function to upload a file to Google Cloud Storage
-def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(source_file_name)
-    return f"gs://{bucket_name}/{destination_blob_name}"
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+except ImportError:
+    st.error("Please install python-dotenv: pip install python-dotenv")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading API key: {e}")
+    st.stop()
 
-# Function to initialize and generate SQL
-def generate_sql(schema_pdf_uri, query_text):
+
+def get_gemini_response(prompt):
+    """Generate a response using the Gemini model."""
     try:
-        # Initialize Vertex AI
-        vertexai.init(project="hackathon-pluto-ai", location="asia-south1")
-        model = GenerativeModel("gemini-1.5-flash-002")
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content([prompt])
 
-        # Load the schema document (document1) from GCS URI
-        document1 = Part.from_uri(mime_type="application/pdf", uri=schema_pdf_uri)
-        
-        # Use the provided query input text
-        input_text = query_text
-        
-        # Define document2 with static sample queries
-        # document2 = Part.from_uri(
-        #     mime_type="application/pdf",
-        #     uri="gs://pluto-ai-hackathon-data/db-query-helper/Sample Schema For Automated Query Creator - Sample Queries.pdf",
-        # )
-        
-        # Configuration for generating content
-        generation_config = {
-            "max_output_tokens": 8192,
-            "temperature": 1,
-            "top_p": 0.95,
-        }
-        prompt = f"""
-        Context:
-        You are an expert SQL query generation assistant. The schema {schema_pdf_uri} provided defines tables with various relationships, including primary and foreign keys.
-
-        Instruction:
-        Based on the schema, generate a SQL query for the following task:
-        Task: {query_text}
-        Ensure the query is correct and optimized.
-        
-        """
-        # Safety settings
-        safety_settings = [
-            SafetySetting(category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=SafetySetting.HarmBlockThreshold.OFF),
-            SafetySetting(category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=SafetySetting.HarmBlockThreshold.OFF),
-            SafetySetting(category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=SafetySetting.HarmBlockThreshold.OFF),
-            SafetySetting(category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=SafetySetting.HarmBlockThreshold.OFF),
-        ]
-           
-
-        # Generate content from the model
-        response = model.generate_content(
-            [document1, prompt],
-            generation_config=generation_config,
-            safety_settings=safety_settings,
-            stream=False,
-        )
-
-        # Access the text from the response directly (no iteration)
-        return response.text
-    
+        # Return the response text directly, ensuring it's properly handled
+        return response.text.strip() if hasattr(response, 'text') else "Error: Unexpected response format from Gemini."
     except Exception as e:
-        return f"Error occurred: {e}"
+        return f"Error from Gemini: {e}"
 
-# Streamlit GUI
-st.title('SQL Query Generator')
 
-# File upload for schema (document1)
-schema_pdf = st.file_uploader("Upload Schema PDF (Document 1)", type=["pdf"])
+def load_schema(filepath="schema.json"):
+    """Load the database schema from a JSON file."""
+    try:
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
 
-# Query input
-query_text = st.text_area("Enter Query Instruction")
 
-# Generate button
-if st.button("Generate SQL"):
-    if schema_pdf and query_text:
-        # Save the uploaded PDF temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(schema_pdf.read())
-            schema_pdf_path = tmp_file.name
+def build_initial_prompt(schema, user_question):
+    """
+    Construct an initial prompt with schema details and specific instructions.
+    The prompt gives structured guidance to Gemini for better SQL generation.
+    """
+    schema_description = json.dumps(schema, indent=2)
+    prompt = f"""
+You are an expert SQL query generator. I will provide you with a database schema and a user query. Use the schema to generate the most appropriate SQL query.
 
-        # Define your GCS bucket and file path
-        gcs_bucket_name = "pluto-ai-hackathon-data"  # Replace with your bucket name
-        gcs_blob_name = f"schemas/{os.path.basename(schema_pdf_path)}"
+Dataset Schema:
+{schema_description}
 
-        # Upload the file to GCS
-        schema_pdf_uri = upload_to_gcs(gcs_bucket_name, schema_pdf_path, gcs_blob_name)
-        st.write(f"Schema uploaded to: {schema_pdf_uri}")
+User Query: "{user_question}"
 
-        # Generate SQL using the uploaded schema and query text
-        result = generate_sql(schema_pdf_uri, query_text)
+Instructions:
+1. Use only the columns and tables provided in the schema. Do not assume the existence of additional data or relationships.
+2. If the query is ambiguous or lacks clarity, ask for more specific details instead of guessing.
+3. Ensure the SQL query is syntactically correct and optimized (e.g., use indexes, minimize unnecessary joins).
+4. Include a `LIMIT 100` clause for large datasets, unless specified otherwise.
+5. Avoid `SELECT *`; always specify columns.
+6. Validate that all table names and column names match those in the schema.
+"""
+    return prompt
+
+
+def build_refinement_prompt(query, schema, error_message=None):
+    """
+    Build a prompt for refining the query, including the previous query and any errors.
+    """
+    schema_description = json.dumps(schema, indent=2)
+    
+    base_prompt = f"""
+You are an expert SQL query generator. Below is a database schema and a previous SQL query with errors.
+
+Dataset Schema:
+{schema_description}
+
+Previous SQL Query:
+{query}
+
+Instructions:
+1. Correct the SQL query based on the schema. Ensure all tables and columns are valid.
+2. Ensure correct SQL syntax and optimize the query (e.g., use indexes, minimize unnecessary joins).
+3. Include a `LIMIT 100` clause for large datasets unless specified otherwise.
+4. Avoid `SELECT *`; always specify columns.
+"""
+
+    if error_message:
+        # If there's an error message, include that in the prompt for more targeted refinement
+        base_prompt += f"\nError in the query: {error_message}\nPlease correct the query accordingly."
+    
+    return base_prompt
+
+
+def iterative_refinement(query, schema):
+    """
+    Use Gemini in a feedback loop to iteratively refine the SQL query.
+    """
+    refined_query = query
+    error_message = None
+    
+    iterations = 0
+    max_iterations = 5  # Set a limit to avoid infinite loops
+    
+    while iterations < max_iterations:
+        iterations += 1
         
-        # Display the generated SQL output
-        st.text_area("Generated SQL Output", value=result, height=200)
+        # Validate using Gemini's own schema compliance based on errors in previous iteration
+        prompt = build_refinement_prompt(refined_query, schema, error_message)
+        refined_query = get_gemini_response(prompt)
+        
+        # Check if the query still has errors; if yes, refine further
+        if "error" in refined_query.lower():
+            error_message = refined_query
+        else:
+            break  # Exit the loop if query is valid
+
+    return refined_query
+
+
+# Load the schema and check if it's available
+schema = load_schema()
+if schema is None:
+    st.error("Error loading schema.json. Please ensure the file exists and is valid JSON.")
+    st.stop()
+
+st.set_page_config(page_title="Intelligent SQL Query Generator", page_icon=":robot:")
+st.title("Gemini-powered SQL Query Generator with Dynamic Interaction")
+
+# User Input Section
+user_question = st.text_input("Ask your question in natural language:", key="input", placeholder="e.g., Show me the list of users from India")
+
+# Generate the SQL query
+submit = st.button("Generate SQL")
+
+if submit:
+    if not user_question.strip():
+        st.warning("Please enter a question.")
     else:
-        st.error("Please upload a schema PDF and enter query instructions.")
+        # Build the initial prompt for Gemini using the schema and user's question
+        prompt = build_initial_prompt(schema, user_question)
+        response = get_gemini_response(prompt)
+
+        st.subheader("Response from Gemini:")
+        if "Error" in response:
+            st.error(response)  # Display Gemini errors
+        else:
+            st.text(response)
+
+            # Validate and optimize the query using iterative refinement
+            refined_query = iterative_refinement(response, schema)
+
+            # Check if Gemini's response contains questions for the user
+            if "?" in refined_query:  # Assuming questions will have a "?" character
+                st.warning("Gemini requires more information to refine the SQL query.")
+                follow_up_answer = st.text_input("Answer Gemini's question to provide more details:")
+
+                if st.button("Submit Details"):
+                    refined_prompt = f"{prompt}\nAdditional User Details: {follow_up_answer}"
+                    refined_response = get_gemini_response(refined_prompt)
+                    st.subheader("Refined SQL Query:")
+                    st.code(refined_response, language="sql")
+            else:
+                st.success("SQL query generated successfully!")
+                st.code(refined_query, language="sql")
