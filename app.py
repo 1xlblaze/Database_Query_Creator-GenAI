@@ -23,8 +23,8 @@ database = "hackathon"
 user = "hackathon"
 password = "hackathon2024"
 
-refined = any
-initial = any
+refined = ""
+initial = ""
 query = ""
 # Function to connect to the database
 def get_gemini_response(prompt):
@@ -242,8 +242,11 @@ if submit:
         # Build the initial prompt for Gemini using the schema and user's question
         prompt = build_initial_prompt(schema, user_question)
         response = get_gemini_response(prompt)
+       
         response = clean_query_for_execution(response)
         initial = response
+        st.session_state.initial = initial
+        
         st.subheader("Initial Query")
         if "Error" in response:
             st.error(response)  # Display Gemini errors
@@ -263,8 +266,9 @@ if submit:
             refined_prompt = f"{prompt}\n"
             refined_query = iterative_refinement(response, schema)
             refined_response = get_gemini_response(refined_prompt)
-            refined = refined_response
             refined_query = clean_query_for_execution(refined_response)
+            st.session_state.refined = refined_query
+            refined = refined_response
             
             st.code(refined_query, language="sql")
             #st.success("SQL iterative query generated successfully!")
@@ -315,24 +319,36 @@ st.subheader("Connect to database for initial query execution")
 #     except Exception as e:
 #         st.write(refined_query)
 #         st.error(f"Error executing query: {e}")
-user_question = st.text_input("to see result with initial query : press 1 else 2 ")
-    
-if st.button("Connect with Database to see the result of the query"):
+user_choice = st.text_input("to see result with initial query : press 1 else 2 (for refined sql query : bydefault if not 1) ")
+submit =  st.button("Submit")
+if submit:
+    try:
+        # Convert user input to integer
+        user_choice = int(user_choice)
+    except ValueError:
+        st.error("Please enter 1 or 2")
+        user_choice = 2
     retries = 0
     max_retries = 3
     success = False
+    refined_query = None
     # response = any
     # prompt = build_initial_prompt_for_query_execution(schema, user_question)
-    # refined_query = get_gemini_response(prompt)
-    if user_question == 1: 
-        st.code(initial , language = "sql")
-        prompt = build_initial_prompt_for_query_execution(schema , initial)
+    refined_query = st.session_state.initial if user_choice == 1 else st.session_state.refined
+
+    #refined_query = refined
+    if user_choice == 1: 
+        st.code(st.session_state.initial, language="sql")
+        #st.write(st.session_state.initial_query)
+
+        prompt = build_initial_prompt_for_query_execution(schema , refined_query)
         refined_query = get_gemini_response(prompt)
         refined_query = clean_query_for_execution(refined_query)
         #refined_query = initial
     else:
-        st.code(refined , language = "sql")
-        prompt = build_refinement_prompt_for_query_execution(refined, schema , "")
+        st.code(st.session_state.refined, language="sql")
+        st.write(refined)
+        prompt = build_refinement_prompt_for_query_execution(refined_query, schema , "")
         refined_query = get_gemini_response(prompt)
         refined_query = clean_query_for_execution(refined_query)
         #refined_query = refined
