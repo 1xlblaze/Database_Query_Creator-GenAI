@@ -17,10 +17,11 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # Expose port for Streamlit
-EXPOSE 8501
+EXPOSE 8080
 
+# Define the entrypoint for running the app
 # Define the entrypoint for running the app
 ENTRYPOINT ["streamlit", "run"]
 
-# Run the streamlit app
-CMD ["app.py"]
+# Use the correct app file and bind the correct port
+CMD ["app.py", "--server.port", "8080"]
