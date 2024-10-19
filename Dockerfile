@@ -16,6 +16,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
+
 # Expose port for Streamlit
 EXPOSE 8080
 

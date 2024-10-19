@@ -1,3 +1,6 @@
-streamlit
 google-generativeai
 python-dotenv
+google-cloud-aiplatform==1.68.0
+google-cloud-bigquery==3.26.0
+streamlit==1.38.0
+psycopg2-binary
