@@ -246,7 +246,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("Gemini-powered SQL Query Generator with Dynamic Interaction")
+st.title("Elevate Your SQL Experience with Our Gemini-Powered Query Generator and Intelligent Self-Healing Query Capabilities!")
 
 # User Input Section
 user_question = st.text_input("Ask your question in natural language:", key="input", placeholder="e.g., Show me the list of sample mcat ids")
