@@ -230,11 +230,26 @@ if schema is None:
     st.error("Error loading schema.json. Please ensure the file exists and is valid JSON.")
     st.stop()
 
-st.set_page_config(page_title="Intelligent SQL Query Generator", page_icon=":robot:")
+st.set_page_config(page_title="PlutoAI", page_icon=":robot:")
+
+# Pluto AI title with description and logo
+st.markdown(
+    """
+    <div style='display: flex; align-items: center; justify-content: center;'>
+        <img src='https://storage.googleapis.com/hackathon-pluto-ai-solution/logo%20pluto%20ai.png' alt='Pluto AI Logo' style='width: 50px; height: 50px; margin-right: 15px;'/>
+        <div>
+            <h1 style='margin: 0; padding: 0; font-size: 2.5em;'>Pluto AI</h1>
+            <p style='font-size: 1.2em; margin-top: 5px;'>A Human Language to SQL Query Converter</p>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("Gemini-powered SQL Query Generator with Dynamic Interaction")
 
 # User Input Section
-user_question = st.text_input("Ask your question in natural language:", key="input", placeholder="e.g., Show me the list of users from India")
+user_question = st.text_input("Ask your question in natural language:", key="input", placeholder="e.g., Show me the list of sample mcat ids")
 user_training_question = user_question
 # Generate the SQL query
 submit = st.button("Generate SQL")
@@ -250,7 +265,7 @@ if submit:
         initial = response
         st.session_state.initial = initial
         
-        st.subheader("Initial Query")
+        st.subheader("Initial Query (Query A)")
         if "Error" in response:
             st.error(response)  # Display Gemini errors
         else:
@@ -265,7 +280,7 @@ if submit:
             # if sub:  # Assuming questions will have a "?" character
                 #st.warning("Gemini requires more information to refine the SQL query.")
                 #follow_up_answer = st.text_input("Answer Gemini's question to provide more details:")
-            st.subheader("Refined SQL Query:") # Debugging log
+            st.subheader("Refined SQL Query (Query B)")  # Debugging log
             refined_prompt = f"{prompt}\n"
             refined_query = iterative_refinement(response, schema)
             refined_response = get_gemini_response(refined_prompt)
@@ -322,7 +337,7 @@ st.subheader("Connect to database for initial query execution")
 #     except Exception as e:
 #         st.write(refined_query)
 #         st.error(f"Error executing query: {e}")
-user_choice = st.text_input("to see result with initial query : press 1 else 2 (for refined sql query : bydefault if not 1) ")
+user_choice = st.text_input("Choose query option: Enter '1' for Initial Query (Query A) or '2' for Refined Query (Query B). Default is Query A.")
 submit =  st.button("Submit")
 if submit:
     try:
@@ -370,6 +385,9 @@ if submit:
                     st.write("Query Results:")
                     st.dataframe(query_results)  # Display results in a table
                     success = True  # Exit the loop on success
+                else:
+                    st.write("Query executed successfully but no results found.")
+                    success = True  # Consider it a success and exit without retrying    
         except Exception as e:
             st.write(f"Error executing initial query: {e}")
             st.write("model doing iterative refinement with previous errors")
