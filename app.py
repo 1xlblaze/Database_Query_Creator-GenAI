@@ -179,7 +179,7 @@ def iterative_refinement(query, schema, error_message="" ,flag=0):
     #error_message = None
     
     iterations = 0
-    max_iterations = 5  # Set a limit to avoid infinite loops
+    max_iterations = 2  # Set a limit to avoid infinite loops
     
     while iterations < max_iterations:
         iterations += 1
@@ -345,9 +345,9 @@ if submit:
         user_choice = int(user_choice)
     except ValueError:
         st.error("Please enter 1 or 2")
-        user_choice = 2
+        user_choice = 1
     retries = 0
-    max_retries = 5
+    max_retries = 10
     success = False
     refined_query = None
     # response = any
@@ -391,7 +391,9 @@ if submit:
         except Exception as e:
             st.write(f"Error executing initial query: {e}")
             st.write("model doing iterative refinement with previous errors")
+            st.write((str(e)))
             error_message = error_message+str(e)
+            #st.write(error_message)
             # Trigger iterative refinement if there's an error
             #prompt = build_refinement_prompt(refined_query, schema, e)
             refined_query = iterative_refinement(refined_query,schema,error_message, 1)
@@ -405,4 +407,4 @@ if submit:
             #refined_query = refined_query  # Update the query to the refined one
 
     if not success:
-        st.error("Failed to execute the query after 5 attempts.")
+        st.error("Failed to execute the query")
