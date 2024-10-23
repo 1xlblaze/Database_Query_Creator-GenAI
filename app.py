@@ -17,11 +17,11 @@ except Exception as e:
     st.stop()
 
 # Database connection details
-host = "34.100.240.197"
-port = 5444
-database = "hackathon"
-user = "hackathon"
-password = "hackathon2024"
+host = os.getenv("DB_HOST")
+port = os.getenv("DB_PORT")
+database = os.getenv("DB_NAME")
+user = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
 
 refined = ""
 initial = ""
@@ -298,11 +298,11 @@ if submit:
                 # if sub: 
 
 # Database connection details
-host = "34.100.240.197"
-port = 5444
-database = "hackathon"
-user = "hackathon"
-password = "hackathon2024"
+# host = os.getenv("DB_HOST")
+# port = os.getenv("DB_PORT")
+# database = os.getenv("DB_NAME")
+# user = os.getenv("DB_USER")
+# password = os.getenv("DB_PASSWORD")
 
 # Function to connect to the database
 def connect_to_db():
@@ -376,6 +376,7 @@ if submit:
     st.write("executing query for sql result with database : your choosen one query with random values")
     st.code(refined_query, language = "sql")
     error_message= ""
+    print(error_message)
     while retries < max_retries and not success:
         try:
             connection = connect_to_db()
@@ -395,6 +396,7 @@ if submit:
             st.write(f"Error executing initial query: {e}")
             st.write("model doing iterative refinement with previous errors")
             error_message = error_message+str(e)
+            print(error_message)
             # Trigger iterative refinement if there's an error
             #prompt = build_refinement_prompt(refined_query, schema, e)
             refined_query = iterative_refinement(refined_query,schema,error_message, 1)
