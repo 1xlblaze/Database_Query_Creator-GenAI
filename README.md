@@ -59,6 +59,7 @@ We welcome contributions! If you'd like to contribute, please follow these steps
 📝 License:
 
 This project is licensed under the MIT License. See the LICENSE file for more information.
+
 🙌 Acknowledgements:
 
 Special thanks to the Google Cloud Gemini AI team for providing the robust AI model, and all contributors who helped shape this project.
