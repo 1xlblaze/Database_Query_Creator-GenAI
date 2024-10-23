@@ -25,8 +25,7 @@ Prerequisites:
     Clone the Repository: Clone the project repository from the code provided in Generative-AI repository
 
 Steps to Setup and Run the Project:
-
-    Build the Docker Image:
+   Build the Docker Image:
 
       docker build -t sql-converter .
 
